@@ -1,104 +1,324 @@
-# DeepOps
+# OpenSkills
 
-Infrastructure automation tools for Kubernetes and Slurm clusters with NVIDIA GPUs.
+Universal skills loader for AI coding agents - bring Claude Code skills to every agent.
 
-## Table of Contents
+## ✨ What Is OpenSkills?
 
-- [DeepOps](#deepops)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Deployment Requirements](#deployment-requirements)
-    - [Provisioning System](#provisioning-system)
-    - [Cluster System](#cluster-system)
-    - [Kubernetes](#kubernetes)
-    - [Slurm](#slurm)
-    - [Hybrid clusters](#hybrid-clusters)
-    - [Virtual](#virtual)
-  - [Updating DeepOps](#updating-deepops)
-  - [Copyright and License](#copyright-and-license)
-  - [Issues](#issues)
-  - [Contributing](#contributing)
+OpenSkills brings Anthropic's skills system to every AI coding agent — Claude Code, Cursor, Windsurf, Aider, Codex, and anything that can read AGENTS.md.
 
-## Overview
+Think of it as the universal installer for SKILL.md.
 
-The DeepOps project encapsulates best practices in the deployment of GPU server clusters and sharing single powerful nodes (such as [NVIDIA DGX Systems](https://www.nvidia.com/en-us/data-center/dgx-systems/)). DeepOps may also be adapted or used in a modular fashion to match site-specific cluster needs. For example:
+## 🚀 Quick Start
 
-- An on-prem data center of NVIDIA DGX servers where DeepOps provides end-to-end capabilities to set up the entire cluster management stack
-- An existing cluster running Kubernetes where DeepOps scripts are used to deploy KubeFlow and connect NFS storage
-- An existing cluster that needs a resource manager / batch scheduler, where DeepOps is used to install Slurm or Kubernetes
-- A single machine where no scheduler is desired, only NVIDIA drivers, Docker, and the NVIDIA Container Runtime
+```bash
+# Install default skills from Anthropic marketplace
+npx openskills install anthropics/skills
 
-Latest release: [DeepOps 23.08 Release](https://github.com/NVIDIA/deepops/releases/tag/23.08)
+# Sync skills to AGENTS.md
+npx openskills sync
 
-It is recommended to use the latest release branch for stable code (linked above). All development takes place on the master branch, which is generally [functional](docs/deepops/testing.md) but may change significantly between releases.
+# List available skills
+npx openskills list
 
-## Deployment Requirements
+# Read a skill
+npx openskills read <skill-name>
+```
 
-### Provisioning System
+## 📋 Features
 
-The provisioning system is used to orchestrate the running of all playbooks and one will be needed when instantiating Kubernetes or Slurm clusters. Supported operating systems which are tested and supported include:
+- **Exact Claude Code compatibility** — same prompt format, same marketplace, same folder structure
+- **Universal** — works with Claude Code, Cursor, Windsurf, Aider, Codex, and more
+- **Progressive disclosure** — load skills only when needed (keeps context clean)
+- **Repo-friendly** — skills live in your project and can be versioned
+- **Private friendly** — install from local paths or private git repos
 
-- NVIDIA DGX OS 4, 5
-- Ubuntu 18.04 LTS, 20.04, 22.04 LTS
-- CentOS 7, 8
+## 🛠️ Installation
 
-### Cluster System
+### Prerequisites
 
-The cluster nodes will follow the requirements described by Slurm or Kubernetes. You may also use a cluster node as a provisioning system but it is not required.
+- Node.js >= 18.0.0
+- npm >= 8.0.0
 
-- NVIDIA DGX OS 4, 5
-- Ubuntu 18.04 LTS, 20.04, 22.04 LTS
-- CentOS 7, 8
+### Install Node.js (if not already installed)
 
-You may also install a supported operating system on all servers via a 3rd-party solution (i.e. [MAAS](https://maas.io/), [Foreman](https://www.theforeman.org/)) or utilize the provided [OS install container](docs/pxe/minimal-pxe-container.md).
+```bash
+# For Linux (Debian/Ubuntu)
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+sudo apt install -y nodejs
 
-### Kubernetes
+# For Linux (RHEL/CentOS)
+sudo dnf install -y https://rpm.nodesource.com/pub_20.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm
+sudo dnf install -y nodejs --setopt=nodesource-nodejs.module_hotfixes=1
 
-Kubernetes (K8s) is an open-source system for automating deployment, scaling, and management of containerized applications. The instantiation of a Kubernetes cluster is done by [Kubespray](submodules/kubespray). Kubespray runs on bare metal and most clouds, using Ansible as its substrate for provisioning and orchestration. For people with familiarity with Ansible, existing Ansible deployments or the desire to run a Kubernetes cluster across multiple platforms, Kubespray is a good choice. Kubespray does generic configuration management tasks from the "OS operators" ansible world, plus some initial K8s clustering (with networking plugins included) and control plane bootstrapping. DeepOps provides additional playbooks for orchestration and optimization of GPU environments.
+# For macOS
+brew install node
 
-Consult the [DeepOps Kubernetes Deployment Guide](docs/k8s-cluster/) for instructions on building a GPU-enabled Kubernetes cluster using DeepOps.
+# For Windows
+# Download and install from https://nodejs.org/
+```
 
-For more information on Kubernetes in general, refer to the [official Kubernetes docs](https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/).
+### Verify Installation
 
-### Slurm
+```bash
+node --version
+npm --version
+```
 
-Slurm is an open-source cluster resource management and job scheduling system that strives to be simple, scalable, portable, fault-tolerant, and interconnect agnostic. Slurm currently has been tested only under Linux.
+## 📚 Usage
 
-As a cluster resource manager, Slurm provides three key functions. First, it allocates exclusive and/or non-exclusive access to resources (compute nodes) to users for some duration of time so they can perform work. Second, it provides a framework for starting, executing, and monitoring work (normally a parallel job) on the set of allocated nodes. Finally, it arbitrates conflicting requests for resources by managing a queue of pending work. Slurm cluster instantiation is achieved through [SchedMD](https://slurm.schedmd.com/download.html)
+### 1. Install Skills
 
-Consult the [DeepOps Slurm Deployment Guide](docs/slurm-cluster/) for instructions on building a GPU-enabled Slurm cluster using DeepOps.
+#### From Anthropic Marketplace
 
-For more information on Slurm in general, refer to the [official Slurm docs](https://slurm.schedmd.com/overview.html).
+```bash
+npx openskills install anthropics/skills
+```
 
-### Hybrid clusters
+#### From Any GitHub Repo
 
-**DeepOps does not test or support a configuration where both Kubernetes and Slurm are deployed on the same physical cluster.**
+```bash
+npx openskills install your-org/your-skills
+```
 
-[NVIDIA Bright Cluster Manager](https://www.brightcomputing.com/brightclustermanager) is recommended as an enterprise solution which enables managing multiple workload managers within a single cluster, including Kubernetes, Slurm, Univa Grid Engine, and PBS Pro.
+#### From a Local Path
 
-**DeepOps does not test or support a configuration where nodes have a heterogenous OS running.**
-Additional modifications are needed if you plan to use unsupported operating systems such as RHEL.
+```bash
+npx openskills install ./local-skills/my-skill
+```
 
-### Virtual
+#### From Private Git Repos
 
-To try DeepOps before deploying it on an actual cluster, a virtualized version of DeepOps may be deployed on a single node using Vagrant. This can be used for testing, adding new features, or configuring DeepOps to meet deployment-specific needs.
+```bash
+npx openskills install git@github.com:your-org/private-skills.git
+```
 
-Consult the [Virtual DeepOps Deployment Guide](virtual/README.md) to build a GPU-enabled virtual cluster with DeepOps.
+### 2. Sync Skills to AGENTS.md
 
-## Updating DeepOps
+```bash
+# Default output: AGENTS.md
+npx openskills sync
 
-To update from a previous version of DeepOps to a newer release, please consult the [DeepOps Update Guide](docs/deepops/update-deepops.md).
+# Custom output path
+npx openskills sync -o ./path/to/AGENTS.md
 
-## Copyright and License
+# Skip prompts
+npx openskills sync -y
+```
 
-This project is released under the [BSD 3-clause license](https://github.com/NVIDIA/deepops/blob/master/LICENSE).
+### 3. List Available Skills
 
-## Issues
+```bash
+npx openskills list
+```
 
-NVIDIA DGX customers should file an NVES ticket via [NVIDIA Enterprise Services](https://nvid.nvidia.com/enterpriselogin/).
+### 4. Read a Skill
 
-Otherwise, bugs and feature requests can be made by [filing a GitHub Issue](https://github.com/NVIDIA/deepops/issues/new).
+```bash
+npx openskills read <skill-name>
 
-## Contributing
+# Read multiple skills
+npx openskills read skill-one,skill-two
+```
 
-To contribute, please issue a [signed](https://raw.githubusercontent.com/NVIDIA/deepops/master/CONTRIBUTING.md) [pull request](https://help.github.com/articles/using-pull-requests/) against the master branch from a local fork. See the [contribution document](https://raw.githubusercontent.com/NVIDIA/deepops/master/CONTRIBUTING.md) for more information.
+### 5. Update Skills
+
+```bash
+# Update all skills
+npx openskills update
+
+# Update specific skills
+npx openskills update pdf docx
+```
+
+### 6. Remove Skills
+
+```bash
+# Interactive removal
+npx openskills manage
+
+# Remove specific skill
+npx openskills remove <skill-name>
+```
+
+## 🌍 Universal Mode (Multi-Agent Setups)
+
+If you use Claude Code and other agents with one AGENTS.md, install to .agent/skills/ to avoid conflicts with Claude's plugin marketplace:
+
+```bash
+npx openskills install anthropics/skills --universal
+```
+
+### Priority Order (Highest Wins)
+
+1. `./.agent/skills/`
+2. `~/.agent/skills/`
+3. `./.claude/skills/`
+4. `~/.claude/skills/`
+
+## 🧬 The SKILL.md Format
+
+OpenSkills uses Anthropic's exact format:
+
+```markdown
+---
+name: pdf
+description: Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms.
+---
+
+# PDF Skill Instructions
+
+When the user asks you to work with PDFs, follow these steps:
+1. Install dependencies: `pip install pypdf2`
+2. Extract text using scripts/extract_text.py
+3. Use references/api-docs.md for details
+```
+
+## 📁 Project Structure
+
+```
+./
+├── AGENTS.md          # Generated skills index
+├── .claude/
+│   └── skills/        # Project-local skills
+│       ├── pdf/
+│       │   └── SKILL.md
+│       └── docx/
+│           └── SKILL.md
+└── .agent/            # Universal mode skills
+    └── skills/
+```
+
+## 🤖 Agent Integration
+
+### For Agents That Can Read AGENTS.md
+
+1. Ensure AGENTS.md is in your project root
+2. Agents can now see the `<available_skills>` section
+3. Use `npx openskills read <skill-name>` to load skills
+
+### Example AGENTS.md Section
+
+```xml
+<skills_system priority="1">
+
+## Available Skills
+
+<!-- SKILLS_TABLE_START -->
+<usage>
+When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
+
+How to use skills:
+- Invoke: `npx openskills read <skill-name>` (run in your shell)
+  - For multiple: `npx openskills read skill-one,skill-two`
+- The skill content will load with detailed instructions on how to complete the task
+- Base directory provided in output for resolving bundled resources (references/, scripts/, assets/)
+
+Usage notes:
+- Only use skills listed in <available_skills> below
+- Do not invoke a skill that is already loaded in your context
+- Each skill invocation is stateless
+</usage>
+
+<available_skills>
+
+<skill>
+<name>pdf</name>
+<description>Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms.</description>
+<location>project</location>
+</skill>
+
+</available_skills>
+<!-- SKILLS_TABLE_END -->
+
+</skills_system>
+```
+
+## 📖 Command Reference
+
+| Command | Description |
+|---------|-------------|
+| `npx openskills install <source> [options]` | Install from GitHub, local path, or private repo |
+| `npx openskills sync [-y] [-o <path>]` | Update AGENTS.md (or custom output) |
+| `npx openskills list` | Show installed skills |
+| `npx openskills read <name>` | Load skill (for agents) |
+| `npx openskills update [name...]` | Update installed skills (default: all) |
+| `npx openskills manage` | Remove skills (interactive) |
+| `npx openskills remove <name>` | Remove specific skill |
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--global` | Install globally to ~/.claude/skills (default: project install) |
+| `--universal` | Install to .agent/skills/ instead of .claude/skills/ |
+| `-y, --yes` | Skip prompts (useful for CI) |
+| `-o, --output <path>` | Output file for sync (default: AGENTS.md) |
+
+## 🌟 Creating Your Own Skills
+
+### Minimal Structure
+
+```
+my-skill/
+└── SKILL.md
+```
+
+### With Resources
+
+```
+my-skill/
+├── SKILL.md
+├── references/
+│   └── api-docs.md
+├── scripts/
+│   └── helper.py
+└── assets/
+    └── template.txt
+```
+
+### Install Your Custom Skill
+
+```bash
+npx openskills install ./my-skill
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Setup
+
+```bash
+# Clone the repo
+git clone https://github.com/numman-ali/openskills.git
+cd openskills
+
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build
+npm run build
+```
+
+## 📄 License
+
+MIT License
+
+## 🙏 Acknowledgements
+
+- Inspired by Anthropic's Claude Code skills system
+- Built with ❤️ for the AI developer community
+
+## 📞 Support
+
+- **GitHub Issues**: https://github.com/numman-ali/openskills/issues
+- **Discord**: Join the OpenSkills community
+
+---
+
+Made with ❤️ by the OpenSkills team
+
+*"Bringing skills to every agent, one SKILL.md at a time."*
