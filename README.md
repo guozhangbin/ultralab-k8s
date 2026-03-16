@@ -1,324 +1,172 @@
-# OpenSkills
+# Ultralab Kubernetes 项目
 
-Universal skills loader for AI coding agents - bring Claude Code skills to every agent.
+## 项目概述
 
-## ✨ What Is OpenSkills?
+本项目基于 DeepOps 和 Kubespray 实现 Kubernetes 集群的自动化部署，支持 GPU 节点管理、容器编排和 AI 辅助测试。
 
-OpenSkills brings Anthropic's skills system to every AI coding agent — Claude Code, Cursor, Windsurf, Aider, Codex, and anything that can read AGENTS.md.
+## 功能特性
 
-Think of it as the universal installer for SKILL.md.
+- **自动化部署**：使用 Ansible 和 Kubespray 实现集群一键部署
+- **GPU 支持**：支持 NVIDIA GPU 节点管理和调度
+- **国内镜像加速**：配置了国内镜像源，解决镜像拉取超时问题
+- **Kubernetes Dashboard**：内置 Dashboard 管理界面，支持中文
+- **Ollama 集成**：使用本地大语言模型辅助集群测试和配置生成
+- **远程桌面服务**：配置了 xrdp 远程桌面服务，方便远程管理
+- **完整的监控与管理**：提供集群管理、故障排查和维护指南
 
-## 🚀 Quick Start
+## 环境要求
 
-```bash
-# Install default skills from Anthropic marketplace
-npx openskills install anthropics/skills
+- **操作系统**：Rocky Linux 9.7
+- **网络**：所有节点之间网络互通
+- **用户**：具有 sudo 权限的用户
+- **Python**：3.9+ 版本
 
-# Sync skills to AGENTS.md
-npx openskills sync
+## 快速开始
 
-# List available skills
-npx openskills list
-
-# Read a skill
-npx openskills read <skill-name>
-```
-
-## 📋 Features
-
-- **Exact Claude Code compatibility** — same prompt format, same marketplace, same folder structure
-- **Universal** — works with Claude Code, Cursor, Windsurf, Aider, Codex, and more
-- **Progressive disclosure** — load skills only when needed (keeps context clean)
-- **Repo-friendly** — skills live in your project and can be versioned
-- **Private friendly** — install from local paths or private git repos
-
-## 🛠️ Installation
-
-### Prerequisites
-
-- Node.js >= 18.0.0
-- npm >= 8.0.0
-
-### Install Node.js (if not already installed)
+### 1. 环境准备
 
 ```bash
-# For Linux (Debian/Ubuntu)
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-sudo apt install -y nodejs
+# 安装 Python 依赖
+sudo /usr/bin/python3 -m pip install ansible jmespath
 
-# For Linux (RHEL/CentOS)
-sudo dnf install -y https://rpm.nodesource.com/pub_20.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm
-sudo dnf install -y nodejs --setopt=nodesource-nodejs.module_hotfixes=1
-
-# For macOS
-brew install node
-
-# For Windows
-# Download and install from https://nodejs.org/
+# 安装系统依赖
+sudo dnf install -y git curl wget
 ```
 
-### Verify Installation
+### 2. 配置集群
+
+编辑 `config/inventory` 文件，添加节点信息：
+
+```ini
+[all]
+master ansible_host=192.168.0.200 ansible_user=user
+gpu01 ansible_host=192.168.0.201 ansible_user=user
+gpu02 ansible_host=192.168.0.202 ansible_user=user
+
+[kube-master]
+master
+
+[kube-node]
+master
+gpu01
+gpu02
+
+[etcd]
+master
+
+[k8s-cluster:children]
+kube-master
+kube-node
+```
+
+### 3. 部署集群
 
 ```bash
-node --version
-npm --version
+# 部署集群
+cd /home/new/deepops && ansible-playbook -l k8s-cluster playbooks/k8s-cluster.yml -vvv
+
+# 部署完成后验证
+sudo /usr/local/bin/kubectl get nodes
+sudo /usr/local/bin/kubectl get pods -n kube-system
 ```
 
-## 📚 Usage
+## 访问 Dashboard
 
-### 1. Install Skills
+### 通过 NodePort 访问
+- 地址：https://192.168.0.200:32099
+- 需要绕过证书警告
 
-#### From Anthropic Marketplace
+### 通过 kubectl proxy 访问
+```bash
+sudo /usr/local/bin/kubectl proxy --port=8080
+# 访问 http://localhost:8080/api/v1/namespaces/kube-system/services/kubernetes-dashboard:https/proxy/
+```
+
+### 登录 Token
+```
+eyJhbGciOiJSUzI1NiIsImtpZCI6IlRYTmR0YTU1Ry1xSXZWbXdpSWI2cUJLVFk4ek1LRVlsNUFjaHRNeXdxb2sifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmRlZXBvcHMubG9jYWwiXSwiZXhwIjoxNzczMzk4Nzk2LCJpYXQiOjE3NzMzOTUxOTYsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5kZWVwb3BzLmxvY2FsIiwianRpIjoiNzE1NTIyOTEtYWE2ZC00NGViLWJhMGYtYzE1NTZhYzIzYTUxIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJhZG1pbi1kYXNoYm9hcmQiLCJ1aWQiOiI4NTE4YmQ2YS0zYWMwLTRlNTgtOTFmZC0wZGY2Y2ZiNjI5YzYifX0sIm5iZiI6MTc3MzM5NTE5Niwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmFkbWluLWRhc2hib2FyZCJ9.o2_eCp3yjA1w5lbwtxO92bYAbhkLMsqIVj2-5Oy59fr1uBX-YD_DYdDAQQ3A_Bl1pa0YM4uL37MXwU1OtwbqWnM1rMorZgtGRhdIpUhz36glxaXRh7KLbgbRiPp749waum0ylJxlR1OgC3UaJ_qQ6XErKapRUOSRcj4wJJB4a6mWVU3Zs427-E4QJ1TgJa2VNHxwTl7BbEqWTl7HCXLU1wLvuUzWZcl5Nn3Pd6u-XSoI2-FPWnerYQ7mnzq4zGN6PNW4kEL5s4jHZmEHj0aZZKUNaz0vTZXlKhCha2NzDUp2ntB8zkYR94biV3wdWUIy7tDumfG3U2sf8aCNLBk1oA
+```
+
+## 使用 Ollama 测试
 
 ```bash
-npx openskills install anthropics/skills
+# 运行测试工具
+./k8s-test-with-ollama.sh
+
+# 菜单选项：
+# 1. 检查 Kubernetes 集群状态
+# 2. 使用 Ollama 分析集群状态
+# 3. 使用 Ollama 生成 Kubernetes 测试配置
+# 4. 退出
 ```
 
-#### From Any GitHub Repo
+## 远程桌面访问
 
 ```bash
-npx openskills install your-org/your-skills
+# 连接方法：
+# Windows：远程桌面连接（Win+R 输入 mstsc），输入服务器 IP 192.168.0.200
+# Linux：使用 Remmina 或其他 RDP 客户端
+# macOS：使用 Microsoft Remote Desktop 应用
 ```
 
-#### From a Local Path
-
-```bash
-npx openskills install ./local-skills/my-skill
-```
-
-#### From Private Git Repos
-
-```bash
-npx openskills install git@github.com:your-org/private-skills.git
-```
-
-### 2. Sync Skills to AGENTS.md
-
-```bash
-# Default output: AGENTS.md
-npx openskills sync
-
-# Custom output path
-npx openskills sync -o ./path/to/AGENTS.md
-
-# Skip prompts
-npx openskills sync -y
-```
-
-### 3. List Available Skills
-
-```bash
-npx openskills list
-```
-
-### 4. Read a Skill
-
-```bash
-npx openskills read <skill-name>
-
-# Read multiple skills
-npx openskills read skill-one,skill-two
-```
-
-### 5. Update Skills
-
-```bash
-# Update all skills
-npx openskills update
-
-# Update specific skills
-npx openskills update pdf docx
-```
-
-### 6. Remove Skills
-
-```bash
-# Interactive removal
-npx openskills manage
-
-# Remove specific skill
-npx openskills remove <skill-name>
-```
-
-## 🌍 Universal Mode (Multi-Agent Setups)
-
-If you use Claude Code and other agents with one AGENTS.md, install to .agent/skills/ to avoid conflicts with Claude's plugin marketplace:
-
-```bash
-npx openskills install anthropics/skills --universal
-```
-
-### Priority Order (Highest Wins)
-
-1. `./.agent/skills/`
-2. `~/.agent/skills/`
-3. `./.claude/skills/`
-4. `~/.claude/skills/`
-
-## 🧬 The SKILL.md Format
-
-OpenSkills uses Anthropic's exact format:
-
-```markdown
----
-name: pdf
-description: Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms.
----
-
-# PDF Skill Instructions
-
-When the user asks you to work with PDFs, follow these steps:
-1. Install dependencies: `pip install pypdf2`
-2. Extract text using scripts/extract_text.py
-3. Use references/api-docs.md for details
-```
-
-## 📁 Project Structure
+## 项目结构
 
 ```
 ./
-├── AGENTS.md          # Generated skills index
-├── .claude/
-│   └── skills/        # Project-local skills
-│       ├── pdf/
-│       │   └── SKILL.md
-│       └── docx/
-│           └── SKILL.md
-└── .agent/            # Universal mode skills
-    └── skills/
+├── ansible_k8s.md          # Kubernetes 部署与使用指南
+├── access-dashboard.sh      # Dashboard 访问脚本
+├── k8s-test-with-ollama.sh  # Ollama 集成测试脚本
+├── config/                  # 集群配置文件
+├── playbooks/               # Ansible playbooks
+├── roles/                   # Ansible roles
+└── submodules/              # 子模块（Kubespray 等）
 ```
 
-## 🤖 Agent Integration
+## 文档
 
-### For Agents That Can Read AGENTS.md
+- **详细指南**：`ansible_k8s.md` - 完整的 Kubernetes 部署与使用指南
+- **快速访问**：`access-dashboard.sh` - 快速访问 Kubernetes Dashboard
+- **测试工具**：`k8s-test-with-ollama.sh` - 使用 Ollama 进行集群测试
 
-1. Ensure AGENTS.md is in your project root
-2. Agents can now see the `<available_skills>` section
-3. Use `npx openskills read <skill-name>` to load skills
+## 故障排查
 
-### Example AGENTS.md Section
+### 常见问题
 
-```xml
-<skills_system priority="1">
+| 错误信息 | 可能原因 | 解决方案 |
+|---------|---------|--------|
+| `no endpoints available for service` | 服务没有可用的 Pod | 检查 Pod 状态和标签选择器 |
+| `SSL certificate problem: self-signed certificate` | 自签名证书警告 | 绕过证书警告或使用 kubectl proxy |
+| `failed to pull image` | 镜像拉取失败 | 检查网络连接和镜像源配置 |
+| `nodes is forbidden` | RBAC 权限问题 | 检查服务账户和角色绑定 |
 
-## Available Skills
-
-<!-- SKILLS_TABLE_START -->
-<usage>
-When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
-
-How to use skills:
-- Invoke: `npx openskills read <skill-name>` (run in your shell)
-  - For multiple: `npx openskills read skill-one,skill-two`
-- The skill content will load with detailed instructions on how to complete the task
-- Base directory provided in output for resolving bundled resources (references/, scripts/, assets/)
-
-Usage notes:
-- Only use skills listed in <available_skills> below
-- Do not invoke a skill that is already loaded in your context
-- Each skill invocation is stateless
-</usage>
-
-<available_skills>
-
-<skill>
-<name>pdf</name>
-<description>Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents, and handling forms.</description>
-<location>project</location>
-</skill>
-
-</available_skills>
-<!-- SKILLS_TABLE_END -->
-
-</skills_system>
-```
-
-## 📖 Command Reference
-
-| Command | Description |
-|---------|-------------|
-| `npx openskills install <source> [options]` | Install from GitHub, local path, or private repo |
-| `npx openskills sync [-y] [-o <path>]` | Update AGENTS.md (or custom output) |
-| `npx openskills list` | Show installed skills |
-| `npx openskills read <name>` | Load skill (for agents) |
-| `npx openskills update [name...]` | Update installed skills (default: all) |
-| `npx openskills manage` | Remove skills (interactive) |
-| `npx openskills remove <name>` | Remove specific skill |
-
-### Flags
-
-| Flag | Description |
-|------|-------------|
-| `--global` | Install globally to ~/.claude/skills (default: project install) |
-| `--universal` | Install to .agent/skills/ instead of .claude/skills/ |
-| `-y, --yes` | Skip prompts (useful for CI) |
-| `-o, --output <path>` | Output file for sync (default: AGENTS.md) |
-
-## 🌟 Creating Your Own Skills
-
-### Minimal Structure
-
-```
-my-skill/
-└── SKILL.md
-```
-
-### With Resources
-
-```
-my-skill/
-├── SKILL.md
-├── references/
-│   └── api-docs.md
-├── scripts/
-│   └── helper.py
-└── assets/
-    └── template.txt
-```
-
-### Install Your Custom Skill
+### 诊断命令
 
 ```bash
-npx openskills install ./my-skill
+# 检查集群状态
+sudo /usr/local/bin/kubectl cluster-info
+
+# 检查 API 服务器状态
+sudo /usr/local/bin/kubectl get componentstatuses
+
+# 检查节点事件
+sudo /usr/local/bin/kubectl get events --sort-by=.lastTimestamp
+
+# 检查 Pod 详细信息
+sudo /usr/local/bin/kubectl describe pod -n kube-system <pod-name>
 ```
 
-## 🤝 Contributing
+## 贡献
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+欢迎提交 Issue 和 Pull Request 来改进这个项目。
 
-### Development Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/numman-ali/openskills.git
-cd openskills
-
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Build
-npm run build
-```
-
-## 📄 License
+## 许可证
 
 MIT License
 
-## 🙏 Acknowledgements
+## 联系方式
 
-- Inspired by Anthropic's Claude Code skills system
-- Built with ❤️ for the AI developer community
-
-## 📞 Support
-
-- **GitHub Issues**: https://github.com/numman-ali/openskills/issues
-- **Discord**: Join the OpenSkills community
+- **GitHub**：https://github.com/guozhangbin/ultralab-k8s
 
 ---
 
-Made with ❤️ by the OpenSkills team
-
-*"Bringing skills to every agent, one SKILL.md at a time."*
+Made with ❤️ for Kubernetes 集群管理
