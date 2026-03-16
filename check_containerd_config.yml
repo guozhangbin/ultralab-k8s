@@ -1,0 +1,14 @@
+---
+- name: Fix containerd config
+  hosts: localhost
+  connection: local
+  become: false
+  tasks:
+    - name: Fix containerd config
+      shell: |
+        ls -l /etc/containerd/config.toml
+      register: result
+
+    - name: Display result
+      debug:
+        msg: "{{ result.stdout_lines }}"

@@ -1,0 +1,137 @@
+<h1 id="kubespray-部署-kubernetes-集群指南">Kubespray 部署 Kubernetes 集群指南</h1>
+<h2 id="kubespray-简介">1. Kubespray 简介</h2>
+<p>Kubespray 是一个基于 Ansible 的 Kubernetes 集群部署工具，它可以帮助你快速、可靠地部署生产级别的 Kubernetes 集群。Kubespray 支持多种容器运行时（Docker、containerd、CRI-O）和网络插件（Calico、Flannel、Cilium 等），并且可以根据你的需求进行灵活配置。</p>
+<h2 id="环境准备">2. 环境准备</h2>
+<h3 id="硬件要求">2.1 硬件要求</h3>
+<ul>
+<li>控制平面节点：至少 2GB 内存，2 个 CPU 核心</li>
+<li>工作节点：至少 1GB 内存，1 个 CPU 核心</li>
+<li>存储：每个节点至少 20GB 磁盘空间</li>
+</ul>
+<h3 id="软件要求">2.2 软件要求</h3>
+<ul>
+<li>Ansible 2.15 或更高版本</li>
+<li>Python 3.9 或更高版本</li>
+<li>目标节点上的操作系统：Ubuntu 20.04/22.04，CentOS 7/8，Debian 10/11 等</li>
+</ul>
+<h3 id="网络要求">2.3 网络要求</h3>
+<ul>
+<li>所有节点之间可以互相通信</li>
+<li>控制平面节点的 6443 端口可以被其他节点访问</li>
+<li>所有节点可以访问互联网（或内部镜像仓库）</li>
+</ul>
+<h2 id="配置国内镜像源">3. 配置国内镜像源</h2>
+<p>由于网络原因，建议配置国内镜像源以加速部署过程。</p>
+<h3 id="修改下载源配置">3.1 修改下载源配置</h3>
+<p>编辑 <code>submodules/kubespray/roles/kubespray-defaults/defaults/main/download.yml</code> 文件：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># gcr and kubernetes image repo define</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">gcr_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;gcr.m.daocloud.io&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">kube_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;k8s.m.daocloud.io&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># docker image repo define</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">docker_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;docker.m.daocloud.io&quot;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># quay image repo define</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">quay_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;quay.m.daocloud.io&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># github image repo define (ex multus only use that)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">github_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;ghcr.m.daocloud.io&quot;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Download URLs</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">dl_k8s_io_url</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://kubernetes-release.pek3b.qingstor.com&quot;</span></span></code></pre></div>
+<h3 id="配置-docker-镜像加速器">3.2 配置 Docker 镜像加速器</h3>
+<p>编辑 <code>submodules/kubespray/roles/container-engine/docker/defaults/main.yml</code> 文件：</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Docker registry mirrors</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">docker_registry_mirrors</span><span class="kw">:</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;https://docker.m.daocloud.io&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;https://registry.docker-cn.com&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;https://hub-mirror.c.163.com&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;https://docker.aityp.com/&quot;</span></span></code></pre></div>
+<h3 id="修改-kubernetes-组件镜像配置">3.3 修改 Kubernetes 组件镜像配置</h3>
+<p>编辑 <code>submodules/kubespray/inventory/sample/group_vars/k8s_cluster/k8s-cluster.yml</code> 文件：</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 使用国内镜像加速 Kubernetes 组件下载</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kube_apiserver_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/kube-apiserver&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">kube_controller_manager_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/kube-controller-manager&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">kube_scheduler_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/kube-scheduler&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">kube_proxy_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/kube-proxy&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">etcd_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/etcd&quot;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">coredns_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/coredns/coredns&quot;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">pause_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ kube_image_repo }}/pause&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 确保 pod_infra_image_repo 使用国内镜像</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="fu">pod_infra_image_repo</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ pause_image_repo }}&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 使用 QingStor（青云）镜像下载 Kubernetes 二进制文件</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="fu">kubelet_download_url</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://kubernetes-release.pek3b.qingstor.com/release/{{ kube_version }}/bin/linux/{{ image_arch }}/kubelet&quot;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="fu">kubeadm_download_url</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://kubernetes-release.pek3b.qingstor.com/release/{{ kube_version }}/bin/linux/{{ image_arch }}/kubeadm&quot;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">kubectl_download_url</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://kubernetes-release.pek3b.qingstor.com/release/{{ kube_version }}/bin/linux/{{ image_arch }}/kubectl&quot;</span></span></code></pre></div>
+<h2 id="部署-kubernetes-集群">4. 部署 Kubernetes 集群</h2>
+<h3 id="准备-inventory-文件">4.1 准备 inventory 文件</h3>
+<p>复制示例 inventory 文件并修改：</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-r</span> submodules/kubespray/inventory/sample inventory/mycluster</span></code></pre></div>
+<p>编辑 <code>inventory/mycluster/hosts.yaml</code> 文件，配置你的节点信息：</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">all</span><span class="kw">:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">hosts</span><span class="kw">:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">master1</span><span class="kw">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ansible_host</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.0.200</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ip</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.0.200</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">access_ip</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.0.200</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">node1</span><span class="kw">:</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ansible_host</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.0.201</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">ip</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.0.201</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">access_ip</span><span class="kw">:</span><span class="at"> </span><span class="fl">192.168.0.201</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">children</span><span class="kw">:</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kube_control_plane</span><span class="kw">:</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hosts</span><span class="kw">:</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">master1</span><span class="kw">:</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">kube_node</span><span class="kw">:</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hosts</span><span class="kw">:</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">master1</span><span class="kw">:</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">node1</span><span class="kw">:</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">etcd</span><span class="kw">:</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hosts</span><span class="kw">:</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">master1</span><span class="kw">:</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">k8s_cluster</span><span class="kw">:</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">children</span><span class="kw">:</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">kube_control_plane</span><span class="kw">:</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">kube_node</span><span class="kw">:</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">calico_rr</span><span class="kw">:</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hosts</span><span class="kw">:</span></span></code></pre></div>
+<h3 id="运行部署脚本">4.2 运行部署脚本</h3>
+<p>使用 Ansible 运行部署脚本：</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ansible-playbook</span> <span class="at">-i</span> inventory/mycluster/hosts.yaml submodules/kubespray/cluster.yml <span class="at">-b</span></span></code></pre></div>
+<h3 id="监控部署过程">4.3 监控部署过程</h3>
+<p>部署过程中，Ansible 会显示每个任务的执行状态。如果遇到错误，它会停止并显示错误信息。你可以根据错误信息进行排查和修复，然后重新运行部署脚本。</p>
+<h2 id="常见问题及解决方案">5. 常见问题及解决方案</h2>
+<h3 id="镜像拉取失败">5.1 镜像拉取失败</h3>
+<p><strong>问题</strong>：部署过程中，容器运行时无法拉取镜像，出现网络超时错误。</p>
+<p><strong>解决方案</strong>： 1. 确保你已经正确配置了国内镜像源（参考第 3 节） 2. 检查节点的网络连接是否正常 3. 尝试手动拉取镜像，验证镜像源是否可用： <code>bash    sudo docker pull k8s.m.daocloud.io/pause:3.10</code></p>
+<h3 id="rbac-权限问题">5.2 RBAC 权限问题</h3>
+<p><strong>问题</strong>：部署完成后，<code>kubernetes-admin</code> 用户无法执行操作，出现权限错误。</p>
+<p><strong>解决方案</strong>： 1. 检查 <code>kubernetes-admin</code> 用户的集群角色绑定： <code>bash    sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf get clusterrolebindings | grep admin</code> 2. 如果没有绑定到 <code>cluster-admin</code> 角色，添加绑定： <code>bash    sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf create clusterrolebinding kubernetes-admin-cluster-admin --clusterrole=cluster-admin --user=kubernetes-admin</code></p>
+<h3 id="pause-镜像冲突">5.3 Pause 镜像冲突</h3>
+<p><strong>问题</strong>：kubelet 尝试拉取 <code>registry.k8s.io/pause:3.10</code> 镜像，而不是使用国内镜像源。</p>
+<p><strong>解决方案</strong>： 1. 检查 <code>kubeadm-setup.yml</code> 文件中的 pause 镜像拉取和标记任务： <code>yaml    - name: Kubeadm | Pull and tag pause image      command: &gt;-        /usr/local/bin/ctr image pull {{ pod_infra_image_repo }}:{{ pod_infra_image_tag }} &amp;&amp;        /usr/local/bin/ctr image tag {{ pod_infra_image_repo }}:{{ pod_infra_image_tag }} registry.k8s.io/pause:{{ pod_infra_image_tag }}      become: true      when:        - inventory_hostname == first_kube_control_plane        - not kubeadm_already_run.stat.exists</code> 2. 确保 <code>pod_infra_image_repo</code> 变量指向国内镜像源： <code>yaml    pod_infra_image_repo: "{{ pause_image_repo }}"    pause_image_repo: "{{ kube_image_repo }}/pause"</code></p>
+<h3 id="containerd-配置问题">5.4 Containerd 配置问题</h3>
+<p><strong>问题</strong>：containerd 无法正确加载 sandbox_image 配置。</p>
+<p><strong>解决方案</strong>： 1. 重新生成 containerd 的配置文件： <code>bash    sudo containerd config default &gt; /etc/containerd/config.toml</code> 2. 修改配置文件中的 sandbox 选项： <code>toml    [plugins."io.containerd.cri.v1.images"]      sandbox = "k8s.m.daocloud.io/pause:3.10"</code> 3. 重启 containerd 服务： <code>bash    sudo systemctl restart containerd</code></p>
+<h3 id="kubelet-配置问题">5.5 Kubelet 配置问题</h3>
+<p><strong>问题</strong>：kubelet 尝试拉取 <code>registry.k8s.io/pause:3.10</code> 镜像，而不是使用国内镜像源。</p>
+<p><strong>解决方案</strong>： 1. 修改 kubelet 的环境变量文件： <code>bash    sudo vi /etc/kubernetes/kubelet.env</code> 2. 添加 <code>--pod-infra-container-image</code> 参数： <code>bash    KUBELET_ARGS="--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \    --pod-infra-container-image=k8s.m.daocloud.io/pause:3.10 \    --config=/etc/kubernetes/kubelet-config.yaml \    --kubeconfig=/etc/kubernetes/kubelet.conf \    --runtime-cgroups=/system.slice/containerd.service \    "</code> 3. 重启 kubelet 服务： <code>bash    sudo systemctl restart kubelet</code></p>
+<h2 id="验证集群状态">6. 验证集群状态</h2>
+<h3 id="检查-api-服务器">6.1 检查 API 服务器</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> netstat <span class="at">-tulpn</span> <span class="kw">|</span> <span class="fu">grep</span> 6443</span></code></pre></div>
+<p>如果 API 服务器正常运行，你应该看到 6443 端口在监听。</p>
+<h3 id="检查节点状态">6.2 检查节点状态</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> kubectl <span class="at">--kubeconfig</span><span class="op">=</span>/etc/kubernetes/admin.conf get nodes</span></code></pre></div>
+<p>如果节点状态为 <code>Ready</code>，则表示节点已经成功加入集群。</p>
+<h3 id="检查控制平面组件">6.3 检查控制平面组件</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> kubectl <span class="at">--kubeconfig</span><span class="op">=</span>/etc/kubernetes/admin.conf get pods <span class="at">-n</span> kube-system</span></code></pre></div>
+<p>如果所有控制平面组件（kube-apiserver、kube-controller-manager、kube-scheduler、etcd）的状态为 <code>Running</code>，则表示控制平面已经成功启动。</p>
+<h3 id="检查集群版本">6.4 检查集群版本</h3>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> kubectl <span class="at">--kubeconfig</span><span class="op">=</span>/etc/kubernetes/admin.conf version</span></code></pre></div>
+<p>这将显示客户端和服务器的 Kubernetes 版本。</p>
+<h2 id="总结">7. 总结</h2>
+<p>Kubespray 是一个功能强大的 Kubernetes 集群部署工具，它可以帮助你快速、可靠地部署生产级别的 Kubernetes 集群。通过配置国内镜像源，你可以加速部署过程，避免网络超时错误。如果遇到问题，你可以参考本文档中的常见问题及解决方案进行排查和修复。</p>
+<p>部署完成后，你可以使用 <code>kubectl</code> 命令管理你的 Kubernetes 集群，例如创建、删除和管理 Pod、Deployment、Service 等资源。</p>
+<p>祝你部署顺利！</p>

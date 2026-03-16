@@ -1,0 +1,14 @@
+---
+- name: Fix etcdctl and etcdutl permissions using shell without sudo
+  hosts: localhost
+  connection: local
+  become: false
+  tasks:
+    - name: Fix etcdctl and etcdutl permissions
+      shell: |
+        ls -l /usr/local/bin/etcdctl /usr/local/bin/etcdutl
+      register: result
+
+    - name: Display result
+      debug:
+        msg: "{{ result.stdout_lines }}"
