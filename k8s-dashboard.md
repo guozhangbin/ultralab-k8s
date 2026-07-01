@@ -369,13 +369,35 @@ cat /tmp/dashboard-token.txt
 5. **登录**: 点击 "Sign in" 按钮
 6. **成功**: 进入 Dashboard 主界面 🎉
 
-#### Token 示例格式
+#### Token 格式说明
+
+> ⚠️ **安全提醒**: 
+> - **不要**将真实 Token 提交到 Git 仓库或公开分享
+> - Token 包含集群管理员权限，泄露会导致安全风险
+> - 每次生成的 Token 都不同，请使用自己的 Token
+
+**Token 结构示例**（仅展示格式，非真实 Token）:
 
 ```
-eyJhbGciOiJSUzI1NiIsImtpZCI6IkRGdTMwejRGRkpzN0FGYVYxekRQTjJwT21sN0JTSE50ZW5QaFFXajVVZGMifQ.eyJhdWQiOlsia3ViZXJuZXRlcy5kZWZhdWx0LnN2YyJdLCJleHAiOjE4MTQ0Mjg1MDAsImlhdCI6MTc4Mjg5MjUwMCwiaXNzIjoia3ViZXJuZXRlcy5kZWZhdWx0LnN2YyIsImp0aSI6IjkzOWNiY2YzLWJjZTYtNGE1OC05ODc5LTFjNjA3ZmJlM2MxMSIsImt1YmVybmV0ZXMuaW8iOnsibmFtZXNwYWNlIjoia3ViZXJuZXRlcy1kYXNoYm9hcmQiLCJzZXJ2aWNlYWNjb3VudCI6eyJuYW1lIjoiYWRtaW4tdXNlciIsInVpZCI6ImQzNDM1OGQ1LTlmZGQtNDE1NC1iYTVjLWIzMjAwODNlZTFmMiJ9fSwibmJmIjoxNzgyODkyNTAwLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.XvXsk6XKv95dHEtz-Jp9TiNPSm9laP8YarsBXEpezLDCuBxFc6XxQWTjLyZyBr-NIrWwoa-5S-H7PNgNXtoKxHq1TyVRkVQL1baM7TrK97B2dRhY4wrN95Dy5LdHtmuDwRrLtdRR1LSCI8WiJigQb1BkocbOBNgziwZ3LXNl33CUadfeEcIHHg3CDCwXrGCCNpff-UFkIIHxhHrYYc9N2UMvJrQLckpOEDqbpY8rtBY6mYELSf8jYRI-QsUIuOzyLB-uURLhQge6fADp0ELYaZHZCqK5wY_H2XzaR_BL2DyxkVElfhz-87uO6sPPDhddFFP061xWF2UkaqsOvLyXcA
+eyJhbGciOiJSUzI1NiIsImtpZCI6Ij<...省略...>.eyJhdWQiOlsia3ViZXJuZXRlcz<...省略...>.<数字签名>
 ```
 
-> **提示**: 这是一个 JWT (JSON Web Token)，包含 Base64 编码的用户信息和签名。不要泄露给他人！
+**Token 组成部分**:
+```
+Header.Payload.Signature
+
+Header:     {"alg":"RS256","typ":"JWT","kid":"xxx"}        # 算法和类型
+Payload:    {"sub":"system:serviceaccount:kubernetes-dashboard:admin-user", "exp":1814428500}  # 用户信息和过期时间
+Signature:  XvXsk6XKv95dHEtz-Jp9T<...>                      # RSA 签名（防篡改）
+```
+
+**获取你的 Token**:
+```bash
+# 运行此命令生成你自己的 Token（不要使用他人的）
+TOKEN=$(kubectl create token admin-user -n kubernetes-dashboard --duration=8760h)
+echo "$TOKEN"
+# 复制输出的完整字符串到浏览器登录框
+```
 
 ---
 
